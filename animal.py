@@ -43,7 +43,7 @@ class Animal(Thread):
         new_x = self.x+1
         new_y = self.y
 
-        if (new_x >= 0 and new_x <= 31) and (new_y >= 0 and new_y <= 17):
+        if (new_x >= 0 and new_x < 31) and (new_y >= 0 and new_y < 17):
             with self.lock:
                 occupancy = self.fairyland[new_x, new_y]
             

@@ -17,7 +17,7 @@ class Herbivore(Animal):
                 self.time_s = time.perf_counter()
 
             self.move(self.random_x, self.random_y)
-            time.sleep(1)
+            time.sleep(0.3)
             
  
 

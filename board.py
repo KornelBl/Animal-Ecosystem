@@ -6,11 +6,19 @@ from pygame.locals import *
 from herbivore import Herbivore
 from carnivore import Carnivore
 from threading import Lock
+from enum import Enum
+from resources import Tree
+
+class Resources(Enum):
+    TREE = 1
+    CAVE = 2
+    POND = 3
+    HERBIVORE = 4
+    CARNIVORE = 5
 
 class Board:
     GREEN = (129, 187, 129)
     BLACK = (0, 0, 0)
-    TREE_COLOR = (100, 220, 100)
     TREE_NUMBER = 5
     CAVE_COLOR = (0, 0, 0)
     CAVE_NUMBER = 5
@@ -18,9 +26,11 @@ class Board:
     POND_NUMBER = 5
 
     def __init__(self):
+        trees = list()
         spaces = list()
-        rows = [n for n in range(40, 720, 40)]
-        cols = [n for n in range(40, 1280, 40)]
+
+        rows = [n for n in range(0, 17, 1)]
+        cols = [n for n in range(0, 31, 1)]
 
         pygame.init()
         surface = pygame.display.set_mode((1280, 720))
@@ -32,10 +42,13 @@ class Board:
 
         for row in rows:
             for col in cols:
-                spaces.append((col-40, row-40))
+                spaces.append((col, row))
 
         coords = random.sample(spaces, Board.TREE_NUMBER+Board.CAVE_NUMBER+Board.POND_NUMBER)
 
+        for i in range(Board.TREE_NUMBER):
+            a, b = coords[i]
+            trees.append(Tree(a, b))
         self.redraw_resources(surface, coords)
 
         #Occupancy map with lock
@@ -43,7 +56,7 @@ class Board:
         fairyland_map = self.init_map(rows, cols, spaces, coords)
 
         #Creating the herbivore threads
-        herbivores = [Herbivore(i, i, fairyland_map, fairy_lock) for i in range(5)]     
+        herbivores = [Herbivore(i, i, fairyland_map, fairy_lock, trees) for i in range(5)]
 
         #Creating the carnivore threads
         carnivores = [Carnivore(i+6, i+6, fairyland_map, fairy_lock) for i in range(5)]     
@@ -95,28 +108,39 @@ class Board:
 
     def init_map(self, rows, cols, spaces, coords):
         land = np.zeros(shape=(len(cols), len(rows)))
-        for n in spaces:
-            if n in coords:
-                a = int(n[0]/40)
-                b = int(n[1]/40)
-                land[a, b] = 1
+        for i in range(Board.TREE_NUMBER):
+            a = coords[i][0]
+            b = coords[i][1]
+            land[a, b] = Resources.TREE.value
+
+        for i in range(Board.TREE_NUMBER, Board.CAVE_NUMBER + Board.TREE_NUMBER):
+            a = coords[i][0]
+            b = coords[i][1]
+            land[a, b] = Resources.CAVE.value
+
+        for i in range(Board.CAVE_NUMBER + Board.TREE_NUMBER,
+                       Board.POND_NUMBER + Board.CAVE_NUMBER + Board.TREE_NUMBER):
+            a = coords[i][0]
+            b = coords[i][1]
+            land[a, b] = Resources.POND.value
+
         return land
 
     def redraw_lines(self, rows, cols, surface):
         for row in rows:
-            pygame.draw.line(surface, Board.BLACK, (0, row), (1280, row))
+            pygame.draw.line(surface, Board.BLACK, (0, row*40+40), (1280, row*40+40))
         for col in cols:
-            pygame.draw.line(surface, Board.BLACK, (col, 0), (col, 720))
+            pygame.draw.line(surface, Board.BLACK, (col*40+40, 0), (col*40+40, 720))
 
     def redraw_resources(self, surface, coords):
         for i in range(Board.TREE_NUMBER):
-            pygame.draw.rect(surface, Board.TREE_COLOR, [coords[i][0]+1, coords[i][1]+1, 39, 39])
+            pygame.draw.rect(surface, Tree.COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
         for i in range(Board.TREE_NUMBER ,Board.CAVE_NUMBER + Board.TREE_NUMBER):
-            pygame.draw.rect(surface, Board.CAVE_COLOR, [coords[i][0]+1, coords[i][1]+1, 39, 39])
+            pygame.draw.rect(surface, Board.CAVE_COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
         for i in range(Board.CAVE_NUMBER + Board.TREE_NUMBER,Board.POND_NUMBER+Board.CAVE_NUMBER + Board.TREE_NUMBER):
-            pygame.draw.rect(surface, Board.POND_COLOR, [coords[i][0]+1, coords[i][1]+1, 39, 39])        
+            pygame.draw.rect(surface, Board.POND_COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
 
     def redraw_herbivores(self, surface, herbivore_positions: list):

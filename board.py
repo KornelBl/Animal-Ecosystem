@@ -7,7 +7,7 @@ from herbivore import Herbivore
 from carnivore import Carnivore
 from threading import Lock
 from enum import Enum
-from resources import Tree
+from resources import Tree,Cave,Pond
 
 class Resources(Enum):
     TREE = 1
@@ -20,13 +20,16 @@ class Board:
     GREEN = (129, 187, 129)
     BLACK = (0, 0, 0)
     TREE_NUMBER = 5
-    CAVE_COLOR = (0, 0, 0)
     CAVE_NUMBER = 5
-    POND_COLOR = (0, 0, 255)
     POND_NUMBER = 5
 
     def __init__(self):
         trees = list()
+        caves = list()
+        ponds = list()
+        herbivores = list()
+        carnivores = list()
+
         spaces = list()
 
         rows = [n for n in range(0, 17, 1)]
@@ -49,6 +52,14 @@ class Board:
         for i in range(Board.TREE_NUMBER):
             a, b = coords[i]
             trees.append(Tree(a, b))
+        for i in range(Board.TREE_NUMBER, Board.CAVE_NUMBER + Board.TREE_NUMBER):
+            a, b = coords[i]
+            caves.append(Cave(a, b))
+        for i in range(Board.CAVE_NUMBER + Board.TREE_NUMBER,
+                       Board.POND_NUMBER + Board.CAVE_NUMBER + Board.TREE_NUMBER):
+            a, b = coords[i]
+            ponds.append(Pond(a, b))
+
         self.redraw_resources(surface, coords)
 
         #Occupancy map with lock
@@ -103,7 +114,7 @@ class Board:
             pygame.display.update()
 
 
-    def draw_me(self) -> None:
+    def redraw(self) -> None:
         pass
 
     def init_map(self, rows, cols, spaces, coords):
@@ -137,10 +148,10 @@ class Board:
             pygame.draw.rect(surface, Tree.COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
         for i in range(Board.TREE_NUMBER ,Board.CAVE_NUMBER + Board.TREE_NUMBER):
-            pygame.draw.rect(surface, Board.CAVE_COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
+            pygame.draw.rect(surface, Cave.COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
         for i in range(Board.CAVE_NUMBER + Board.TREE_NUMBER,Board.POND_NUMBER+Board.CAVE_NUMBER + Board.TREE_NUMBER):
-            pygame.draw.rect(surface, Board.POND_COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
+            pygame.draw.rect(surface, Pond.COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
 
     def redraw_herbivores(self, surface, herbivore_positions: list):
@@ -150,3 +161,4 @@ class Board:
     def redraw_carnivores(self, surface, carnivore_positions: list):
         for i in carnivore_positions:
             pygame.draw.circle(surface, (255, 0, 0), (i[0]*40+20, i[1]*40+20), 15, 1)
+

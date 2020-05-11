@@ -63,14 +63,14 @@ class Board:
         self.redraw_resources(surface, coords)
 
         #Occupancy map with lock
-        fairy_lock = Lock()
-        fairyland_map = self.init_map(rows, cols, spaces, coords)
-
+        occupancy_map_lock = Lock()
+        occupancy_map = self.init_map(rows, cols, spaces, coords)
+        
         #Creating the herbivore threads
-        herbivores = [Herbivore(i, i, fairyland_map, fairy_lock, trees) for i in range(5)]
+        herbivores = [Herbivore(i, i, occupancy_map, occupancy_map_lock, ponds, trees, caves) for i in range(5)]
 
         #Creating the carnivore threads
-        carnivores = [Carnivore(i+6, i+6, fairyland_map, fairy_lock) for i in range(5)]     
+        carnivores = [Carnivore(i+6, i+6, occupancy_map, occupancy_map_lock, ponds) for i in range(5)]     
 
         for i in herbivores:
             i.start()
@@ -82,17 +82,29 @@ class Board:
         carnivore_positions_list = []
 
         while True:
+            occupancy_map_lock.acquire(True)
+
             #Updating current herbivore positions
             herbivore_positions_list.clear()
             for i in herbivores:
-                a, b = i.get_position() 
-                herbivore_positions_list.append([a, b])
+                if i.alive:
+                    a, b = i.get_position() 
+                    herbivore_positions_list.append([a, b])
 
             #Updating current carnivore positions
             carnivore_positions_list.clear()
             for i in carnivores:
-                a, b = i.get_position() 
-                carnivore_positions_list.append([a, b])
+                if i.alive:
+                    a, b = i.get_position() 
+                    carnivore_positions_list.append([a, b])
+
+            #Updating the occupancy map
+            occupancy_map = self.init_map(rows, cols, spaces, coords)
+            self.update_occupancy_list(occupancy_map, occupancy_map_lock,
+                                           herbivore_positions_list, 
+                                           carnivore_positions_list)
+
+            occupancy_map_lock.release()
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -136,6 +148,16 @@ class Board:
             land[a, b] = Resources.POND.value
 
         return land
+
+    def update_occupancy_list(self, occupancy_map, occupancy_map_lock, 
+                              herbivore_positions, carnivore_positions):
+            for herbivore_pos in herbivore_positions:
+                occupancy_map[herbivore_pos[0], herbivore_pos[1]] = Resources.HERBIVORE.value
+            
+            for carnivore_pos in carnivore_positions:
+                occupancy_map[carnivore_pos[0], carnivore_pos[1]] = Resources.CARNIVORE.value
+
+
 
     def redraw_lines(self, rows, cols, surface):
         for row in rows:

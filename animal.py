@@ -12,13 +12,14 @@ class Moves(Enum):
 
 
 class Animal(Thread):
-    def __init__(self, x: int, y: int, fairyland: list, fairy_lock: Lock):
+    def __init__(self, x: int, y: int, fairyland: list, fairy_lock: Lock, ponds: list):
         Thread.__init__(self)
 
         self.alive = True
 
         self.food = 100
         self.water = 100
+        self.sleep = 100
 
         self.x = x
         self.y = y
@@ -26,16 +27,22 @@ class Animal(Thread):
         self.fairyland = fairyland
         self.lock = fairy_lock
 
-        self.time_s = time.perf_counter()
+        self.time_s = None
         self.random_x = random.randrange(0, 31)
         self.random_y = random.randrange(0, 17)
 
-    def hunger(self):
-        self.food -= 2
-        self.water -= 2
+    def update_needs(self):
+        self.food -= 1
+        self.water -= 1
+        self.sleep -= 0.5
+
         if self.food < 1 or self.water <1:
             #stań sie ciałem
             self.alive = False
+
+        # if self.sleep < 1:
+        #     time.sleep(1.5, 3.0)
+        #     self.sleep = 200
 
     def get_food_pos(self) -> (int, int):
         pass
@@ -50,6 +57,46 @@ class Animal(Thread):
         """Returning the current animal position.
         Used by the board to redraw their positions"""
         return self.x, self.y
+
+
+    def wander(self):
+        """Wanders aimlessy when all needs are fulfilled"""
+        if self.time_s is None:
+            self.random_x, self.random_y = random.randrange(0, 32), random.randrange(0, 18)
+            self.time_s = time.perf_counter()
+
+        elif (time.perf_counter() - self.time_s) > 5:
+            self.random_x, self.random_y = random.randrange(0, 32), random.randrange(0, 18)
+            self.time_s = time.perf_counter()
+
+        self.move(self.random_x, self.random_y)
+
+
+    def look_for_water(self):
+        nearest_pond = self.get_pond_pos()
+
+        self.move(nearest_pond.x, nearest_pond.y)
+
+        if self.calculate_distance(nearest_pond.x, self.x, nearest_pond.y, self.y) == 1:
+            
+            if nearest_pond.lock.acquire(True):
+                self.x = nearest_pond.x
+                self.y = nearest_pond.y
+
+                time.sleep(random.uniform(1.5, 3.0))
+
+                self.water = 100
+
+                nearest_pond.lock.release()
+
+    def get_pond_pos(self):
+        dist = 10000
+        for pond in self.ponds:
+            new_dist = self.calculate_distance(self.x, pond.x, self.y, pond.y)
+            if new_dist < dist:
+                dist = new_dist
+                nearest_pond = pond
+        return nearest_pond
 
         #Searching for the fastest move to get to the x,y destination
     def move(self, x, y):    

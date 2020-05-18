@@ -26,15 +26,17 @@ class Animal(Thread):
 
         self.fairyland = fairyland
         self.lock = fairy_lock
+        self.ponds = ponds
+
 
         self.time_s = None
         self.random_x = random.randrange(0, 31)
         self.random_y = random.randrange(0, 17)
 
     def update_needs(self):
-        self.food -= 1
-        self.water -= 1
-        self.sleep -= 0.5
+        self.food -= 2
+        self.water -= 2
+        self.sleep -= 1
 
         if self.food < 1 or self.water <1:
             #stań sie ciałem
@@ -44,14 +46,7 @@ class Animal(Thread):
         #     time.sleep(1.5, 3.0)
         #     self.sleep = 200
 
-    def get_food_pos(self) -> (int, int):
-        pass
 
-    def get_water_pos(self) -> (int, int):
-        pass
-
-    def get_cave_pos(self) -> (int, int):
-        pass
 
     def get_position(self) -> (int, int):
         """Returning the current animal position.

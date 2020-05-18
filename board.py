@@ -67,10 +67,10 @@ class Board:
         occupancy_map = self.init_map(rows, cols, spaces, coords)
         
         #Creating the herbivore threads
-        herbivores = [Herbivore(i, i, occupancy_map, occupancy_map_lock, ponds, trees, caves) for i in range(5)]
+        herbivores = [Herbivore(i, i, occupancy_map, occupancy_map_lock, ponds, trees, caves) for i in range(10)]
 
         #Creating the carnivore threads
-        carnivores = [Carnivore(i+6, i+6, occupancy_map, occupancy_map_lock, ponds) for i in range(5)]     
+        carnivores = [Carnivore(i+6, i+6, occupancy_map, occupancy_map_lock, ponds, herbivores) for i in range(5)]
 
         for i in herbivores:
             i.start()
@@ -90,6 +90,8 @@ class Board:
                 if i.alive:
                     a, b = i.get_position() 
                     herbivore_positions_list.append([a, b])
+                else:
+                    herbivores.remove(i)
 
             #Updating current carnivore positions
             carnivore_positions_list.clear()
@@ -100,7 +102,7 @@ class Board:
 
             #Updating the occupancy map
             occupancy_map = self.init_map(rows, cols, spaces, coords)
-            self.update_occupancy_list(occupancy_map, occupancy_map_lock,
+            self.update_occupancy_list(occupancy_map,
                                            herbivore_positions_list, 
                                            carnivore_positions_list)
 
@@ -149,7 +151,7 @@ class Board:
 
         return land
 
-    def update_occupancy_list(self, occupancy_map, occupancy_map_lock, 
+    def update_occupancy_list(self, occupancy_map,
                               herbivore_positions, carnivore_positions):
             for herbivore_pos in herbivore_positions:
                 occupancy_map[herbivore_pos[0], herbivore_pos[1]] = Resources.HERBIVORE.value

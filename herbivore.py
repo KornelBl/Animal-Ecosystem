@@ -2,13 +2,14 @@ import random
 import time
 from animal import Animal
 import math
+from threading import Lock
     
 class Herbivore(Animal):
     def __init__(self, x: int, y: int, fairyland_map: list, fairy_lock, ponds: list, trees: list, caves: list):
         super(Herbivore, self).__init__(x, y, fairyland_map, fairy_lock, ponds)
         self.trees = trees
-        self.ponds = ponds
         self.caves = caves
+        self.lock = Lock()
 
     def run(self):
 
@@ -27,7 +28,7 @@ class Herbivore(Animal):
 
             time.sleep(0.3)
 
-    def get_food_pos(self) -> (int, int):
+    def get_food_pos(self):
         dist = 10000
         for tree in self.trees:
             new_dist = self.calculate_distance(self.x,tree.x,self.y,tree.y)

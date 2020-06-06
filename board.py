@@ -8,6 +8,7 @@ from carnivore import Carnivore
 from threading import Lock
 from enum import Enum
 from resources import Tree,Cave,Pond
+import queue
 
 class Resources(Enum):
     TREE = 1
@@ -31,6 +32,8 @@ class Board:
         carnivores = list()
 
         spaces = list()
+
+        shared_queue = queue.Queue(maxsize=1)
 
         rows = [n for n in range(0, 17, 1)]
         cols = [n for n in range(0, 31, 1)]
@@ -62,15 +65,18 @@ class Board:
 
         self.redraw_resources(surface, coords)
 
-        #Occupancy map with lock
-        occupancy_map_lock = Lock()
+        #Occupancy map
         occupancy_map = self.init_map(rows, cols, spaces, coords)
-        
+        shared_queue.put(occupancy_map)
+
         #Creating the herbivore threads
-        herbivores = [Herbivore(i, i, occupancy_map, occupancy_map_lock, ponds, trees, caves) for i in range(10)]
+        herbivores = [Herbivore(i, i, shared_queue, ponds, trees, caves) for i in range(8)]
 
         #Creating the carnivore threads
-        carnivores = [Carnivore(i+6, i+6, occupancy_map, occupancy_map_lock, ponds, herbivores) for i in range(5)]
+        carnivores = [Carnivore(i+6, i+6, shared_queue, ponds, herbivores) for i in range(2)]
+
+        for i in herbivores:
+            i.herbivores = herbivores
 
         for i in herbivores:
             i.start()
@@ -78,35 +84,29 @@ class Board:
         for i in carnivores:
             i.start()
 
-        herbivore_positions_list = []
-        carnivore_positions_list = []
 
         while True:
-            occupancy_map_lock.acquire(True)
-
-            #Updating current herbivore positions
-            herbivore_positions_list.clear()
+            
+            #herbivore reproduction
             for i in herbivores:
-                if i.alive:
+                if i.alive:     
                     a, b = i.get_position() 
-                    herbivore_positions_list.append([a, b])
+                    if i.ready_to_reproduce:
+                        new_herbivore = Herbivore(a, b, shared_queue, ponds, trees, caves)
+                        i.ready_to_reproduce = False
+
+                        herbivores.append(new_herbivore)
+                        new_herbivore.start()
                 else:
                     herbivores.remove(i)
 
-            #Updating current carnivore positions
-            carnivore_positions_list.clear()
-            for i in carnivores:
-                if i.alive:
-                    a, b = i.get_position() 
-                    carnivore_positions_list.append([a, b])
+            for i in herbivores:
+                i.herbivores = herbivores
 
-            #Updating the occupancy map
-            occupancy_map = self.init_map(rows, cols, spaces, coords)
-            self.update_occupancy_list(occupancy_map,
-                                           herbivore_positions_list, 
-                                           carnivore_positions_list)
 
-            occupancy_map_lock.release()
+            # occupancy_map = shared_queue.get(True)
+            # occupancy_map = self.init_map(rows, cols, spaces, coords) 
+            # shared_queue.put(occupancy_map)
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -123,8 +123,8 @@ class Board:
             surface.fill(Board.GREEN)
             self.redraw_lines(rows, cols, surface)
             self.redraw_resources(surface, coords)
-            self.redraw_herbivores(surface, herbivore_positions_list)
-            self.redraw_carnivores(surface, carnivore_positions_list)
+            self.redraw_herbivores(surface, herbivores)
+            self.redraw_carnivores(surface, carnivores)
             pygame.display.update()
 
 
@@ -178,11 +178,21 @@ class Board:
             pygame.draw.rect(surface, Pond.COLOR, [coords[i][0]*40+1, coords[i][1]*40+1, 39, 39])
 
 
-    def redraw_herbivores(self, surface, herbivore_positions: list):
-        for i in herbivore_positions:
-            pygame.draw.circle(surface, (255, 182, 193), (i[0]*40+20, i[1]*40+20), 15, 1)
+    def redraw_herbivores(self, surface, herbivores):
+        for i in herbivores:
+            if i.alive:
+                a, b = i.get_position() 
+                if i.is_reproducing:
+                    pygame.draw.circle(surface, (255, 182, 120), (a*40+20, b*40+20), 15, 0)
+                else:
+                    pygame.draw.circle(surface, (255, 183, 193), (a*40+20, b*40+20), 15, 1)
 
-    def redraw_carnivores(self, surface, carnivore_positions: list):
-        for i in carnivore_positions:
-            pygame.draw.circle(surface, (255, 0, 0), (i[0]*40+20, i[1]*40+20), 15, 1)
+    def redraw_carnivores(self, surface, carnivores):
+        for i in carnivores:
+            if i.alive:
+                a, b = i.get_position() 
+                if i.is_eating:
+                    pygame.draw.circle(surface, (255, 0, 0), (a*40+20, b*40+20), 15, 0)
+                else:
+                    pygame.draw.circle(surface, (255, 0, 0), (a*40+20, b*40+20), 15, 1)
 

@@ -5,26 +5,30 @@ from threading import Lock
 import queue
 
 class Carnivore(Animal):
-    def __init__(self, x: int, y: int, occupancy_queue: queue, ponds: list, herbivores: list):
+    def __init__(self, x: int, y: int, occupancy_queue: queue, ponds: list, herbivores: list, carnivores: list):
         super(Carnivore, self).__init__(x, y, occupancy_queue, ponds)
         self.herbivores = herbivores
+        self.carnivores = carnivores
         self.is_eating = False
+        self.carnivore_lock = Lock()
 
     def run(self):
         while(self.alive):
 
-            self.update_needs()
+            if not self.is_reproducing:
+                self.update_needs()
 
-            if self.food < 50:
-                self.look_for_food()
-            elif self.water < 50:
-                self.look_for_water()
-            elif self.sleep < 50:
-                #-------------------------------------------------
-                self.wander()
-                self.sleep = 100
-            else:
-                self.wander()
+                if self.food < 50:
+                    self.look_for_food()
+                elif self.water < 50:
+                    self.look_for_water()
+                elif self.sleep < 50:
+                    time.sleep(1)
+                    self.sleep = 100
+                elif self.need_for_reproduction < 50:
+                    self.reproduce()
+                else:
+                    self.wander()
 
             time.sleep(0.3)
 
@@ -64,6 +68,50 @@ class Carnivore(Animal):
             else:
                 self.wander()
         self.is_eating = False
+
+    def get_carnivore_pos(self) -> Animal:
+        dist = 10000
+        nearest_carnivore = None
+        for carnivore in self.carnivores:
+            if carnivore is not self:
+                new_dist = self.calculate_distance(self.x,carnivore.x,self.y, carnivore.y)
+                if new_dist < dist:
+                    dist = new_dist
+                    nearest_carnivore = carnivore
+        return nearest_carnivore
+
+
+    def reproduce(self):
+        nearest_carnivore = self.get_carnivore_pos()
+        if nearest_carnivore is None:
+            return
+
+        self.move(nearest_carnivore.x, nearest_carnivore.y)
+
+        if self.calculate_distance(nearest_carnivore.x, self.x, nearest_carnivore.y, self.y) == 1:
+
+            if nearest_carnivore.carnivore_lock.acquire(False):
+
+                self.update_occupancy_map(self.x, self.y, 0)
+
+                self.x = nearest_carnivore.x
+                self.y = nearest_carnivore.y
+
+                nearest_carnivore.is_reproducing = True
+                self.is_reproducing = True
+
+                time.sleep(random.uniform(1.5, 3.0))
+
+                self.ready_to_reproduce = True
+                self.need_for_reproduction = 100
+                nearest_carnivore.need_for_reproduction = 100
+
+                nearest_carnivore.carnivore_lock.release()
+            else:
+                self.wander()
+
+        nearest_carnivore.is_reproducing = False
+        self.is_reproducing = False
 
     def move(self, x, y):    
         best_distance = None

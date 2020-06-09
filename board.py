@@ -73,7 +73,7 @@ class Board:
         herbivores = [Herbivore(i, i, shared_queue, ponds, trees, caves) for i in range(8)]
 
         #Creating the carnivore threads
-        carnivores = [Carnivore(i+6, i+6, shared_queue, ponds, herbivores) for i in range(2)]
+        carnivores = [Carnivore(i+6, i+6, shared_queue, ponds, herbivores, carnivores) for i in range(2)]
 
         for i in herbivores:
             i.herbivores = herbivores
@@ -100,8 +100,21 @@ class Board:
                 else:
                     herbivores.remove(i)
 
+
             for i in herbivores:
                 i.herbivores = herbivores
+
+            for i in carnivores:
+                if i.alive:
+                    a, b = i.get_position()
+                    if i.ready_to_reproduce:
+                        new_carnivore = Carnivore(a, b, shared_queue, ponds, herbivores, carnivores)
+                        i.ready_to_reproduce = False
+
+                        carnivores.append(new_carnivore)
+                        new_carnivore.start()
+                else:
+                    carnivores.remove(i)
 
 
             # occupancy_map = shared_queue.get(True)

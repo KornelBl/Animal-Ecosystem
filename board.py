@@ -78,6 +78,9 @@ class Board:
         for i in herbivores:
             i.herbivores = herbivores
 
+        for i in carnivores:
+            i.carnivores = carnivores
+
         for i in herbivores:
             i.start()
 
@@ -116,6 +119,9 @@ class Board:
                 else:
                     carnivores.remove(i)
 
+
+            for i in carnivores:
+                i.carnivores = carnivores
 
             # occupancy_map = shared_queue.get(True)
             # occupancy_map = self.init_map(rows, cols, spaces, coords) 
@@ -206,6 +212,8 @@ class Board:
                 a, b = i.get_position() 
                 if i.is_eating:
                     pygame.draw.circle(surface, (255, 0, 0), (a*40+20, b*40+20), 15, 0)
+                elif i.is_reproducing:
+                    pygame.draw.circle(surface, (255, 0, 255), (a*40+20, b*40+20), 15, 0)
                 else:
                     pygame.draw.circle(surface, (255, 0, 0), (a*40+20, b*40+20), 15, 1)
 
